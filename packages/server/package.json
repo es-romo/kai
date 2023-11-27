@@ -1,0 +1,20 @@
+{
+  "name": "@es-romo/relay-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "build/index.js",
+  "scripts": {
+    "start": "node build/src/start.js",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Esteban Romo Esparza",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/websocket": "^8.2.0",
+    "fastify": "^4.24.3"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10"
+  }
+}

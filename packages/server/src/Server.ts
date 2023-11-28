@@ -8,7 +8,7 @@ const { version } = pkg
 
 const DEFAULT_PORT = 8080
 const DEFAULT_TIMEOUT = 60e3
-const DEFAULT_CAPACITY = 2
+const DEFAULT_CAPACITY = 3
 
 export class Server {
   private port: number

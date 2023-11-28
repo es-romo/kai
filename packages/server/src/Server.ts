@@ -61,6 +61,7 @@ export class Server {
     this.sendToAll(roomId, { type: 'Join', peerId, peers: this.rooms[roomId].map(peer => peer.id) })
   }
 
+  // TODO: Properly parse message
   private handleMessage(peerId: PeerId, roomId: RoomId, message: WebSocket.RawData) {
     const msg = JSON.parse(message.toString()) as Message.ClientToServer
     switch (msg.type) {
@@ -87,18 +88,28 @@ export class Server {
     }
   }
 
+  //TODO: Decide if I need to handle pong or a heartbeat type and use it for peer timeouts
   private handlePong(peerId: PeerId, roomId: RoomId) {}
 
   public sendToAll(roomId: RoomId, msg: Message.ServerToClient) {
-    console.log('sendToAll', roomId, msg)
+    for (const peer of this.rooms[roomId]) {
+      peer.socket.send(JSON.stringify(msg))
+    }
   }
 
   public sendToHost(roomId: RoomId, msg: Message.ServerToClient) {
-    console.log('sendToHost', roomId, msg)
+    const hostId = this.getHost(roomId)
+    if (hostId) {
+      const host = this.rooms[roomId]?.find(peer => peer.id === hostId)
+      if (host) host.socket.send(JSON.stringify(msg))
+    }
   }
 
   public sendToPeers(roomId: RoomId, msg: Message.ServerToClient) {
-    console.log('sendToPeers', roomId, msg)
+    const hostId = this.getHost(roomId)
+    for (const peer of this.rooms[roomId]) {
+      if (hostId !== peer.id) peer.socket.send(JSON.stringify(msg))
+    }
   }
 
   private handleHandshake: preHandlerHookHandler = (req, res, nxt) => {

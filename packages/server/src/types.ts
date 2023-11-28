@@ -13,7 +13,7 @@ export enum CloseCode {
 
 // TODO: consider adding heartbeat type instead of using pong
 export namespace Message {
-  export type ClientToServer = Data
+  export type ClientToServer = DataIn
 
   export interface Join {
     type: 'Join'
@@ -21,13 +21,18 @@ export namespace Message {
     peers: PeerId[]
   }
 
-  export interface Data {
+  export interface DataIn {
     type: 'Data'
     data: string
-    from: PeerId
   }
 
-  export type ServerToClient = Join | Data | Leave
+  export interface DataOut {
+    type: 'Data'
+    from: PeerId
+    data: string
+  }
+
+  export type ServerToClient = Join | DataOut | Leave
 
   export interface Leave {
     type: 'Leave'

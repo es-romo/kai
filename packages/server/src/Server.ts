@@ -27,6 +27,11 @@ export class Server {
     this.timeout = timeout
     this.capacity = capacity
     this.rooms = {}
+    this.fastify.addHook('preClose', () => {
+      this.fastify.websocketServer?.clients.forEach(socket => {
+        socket.terminate()
+      })
+    })
   }
 
   public createRoom(): RoomId {
@@ -34,7 +39,6 @@ export class Server {
     const roomId = Math.random().toString(36).substr(2, 4).toUpperCase()
     this.rooms[roomId] = []
 
-    // Delete room after timeout if empty
     setTimeout(() => {
       const room = this.rooms[roomId]
       if (room && !room?.length) delete this.rooms[roomId]
@@ -147,9 +151,6 @@ export class Server {
   }
 
   close() {
-    this.fastify.websocketServer?.clients.forEach(socket => {
-      socket.terminate()
-    })
     return this.fastify.close()
   }
 }

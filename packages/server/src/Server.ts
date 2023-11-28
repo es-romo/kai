@@ -133,7 +133,10 @@ export class Server {
           const { peerId, roomId } = req.params
           this.handleJoin(peerId, roomId, cn.socket)
           cn.socket.on('message', message => this.handleMessage(peerId, roomId, message))
-          cn.socket.on('close', () => this.handleLeave(peerId, roomId))
+          cn.socket.on('close', code => {
+            // The close event fires even if the connection was closed by the server. Server initated close codes are in the 4000 range.
+            if (code < 4000) this.handleLeave(peerId, roomId)
+          })
           cn.socket.on('error', () => this.handleLeave(peerId, roomId))
           cn.socket.on('pong', () => this.handlePong(peerId, roomId))
         }

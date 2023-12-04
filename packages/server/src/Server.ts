@@ -47,8 +47,8 @@ export class Server {
     return roomId
   }
 
-  public closeRoom(roomId: RoomId, code: CloseCode) {
-    this.rooms[roomId]?.forEach(peer => peer.socket.close(code))
+  public closeRoom(roomId: RoomId) {
+    this.rooms[roomId]?.forEach(peer => peer.socket.close(CloseCode.RoomClosed))
     delete this.rooms[roomId]
   }
 
@@ -75,9 +75,12 @@ export class Server {
     }
   }
 
-  private handleLeave(peerId: PeerId, roomId: RoomId) {
+  private handleLeave(peerId: PeerId, roomId: RoomId, code?: number) {
+    // If the room has already been closed, don't do anything as its all gone
+    if (code === CloseCode.RoomClosed) return
+
     if (this.getHost(roomId) === peerId) {
-      this.closeRoom(roomId, CloseCode.RoomClosed)
+      this.closeRoom(roomId)
     } else {
       this.rooms[roomId] = this.rooms[roomId].filter(peer => peer.id !== peerId)
       this.sendToAll(roomId, {
@@ -89,7 +92,9 @@ export class Server {
   }
 
   //TODO: Decide if I need to handle pong or a heartbeat type and use it for peer timeouts
-  private handlePong(peerId: PeerId, roomId: RoomId) {}
+  private handlePong(peerId: PeerId, roomId: RoomId) {
+    console.log('pong', peerId, roomId)
+  }
 
   public sendToAll(roomId: RoomId, msg: Message.ServerToClient) {
     for (const peer of this.rooms[roomId]) {
@@ -149,9 +154,10 @@ export class Server {
           this.handleJoin(peerId, roomId, cn.socket)
           cn.socket.on('message', message => this.handleMessage(peerId, roomId, message))
           cn.socket.on('close', code => {
-            // The close event fires even if the connection was closed by the server. Server initated close codes are in the 4000 range.
-            if (code < 4000) this.handleLeave(peerId, roomId)
+            console.log('close', code)
+            this.handleLeave(peerId, roomId, code)
           })
+          // cn.socket.on('close', code => this.handleLeave(peerId, roomId, code))
           cn.socket.on('error', () => this.handleLeave(peerId, roomId))
           cn.socket.on('pong', () => this.handlePong(peerId, roomId))
         }

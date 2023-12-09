@@ -2,7 +2,7 @@ import Fastify, { FastifyInstance, FastifyRequest, preHandlerHookHandler } from 
 import FastifyWebsocket from '@fastify/websocket'
 import pkg from '../package.json'
 import WebSocket from 'ws'
-import { RejectCode, Peer, PeerId, RoomId, Message, CloseCode } from './types'
+import { Peer, PeerId, RoomId, Message, CloseCode } from './types'
 
 const { version } = pkg
 
@@ -75,9 +75,9 @@ export class Server {
     }
   }
 
-  private handleLeave(peerId: PeerId, roomId: RoomId, code?: number) {
-    // If the room has already been closed, don't do anything as its all gone
-    if (code === CloseCode.RoomClosed) return
+  private handleLeave(peerId: PeerId, roomId: RoomId) {
+    // If the room does not exist anymore, don't do anything as its all gone
+    if (!this.rooms[roomId]) return
 
     if (this.getHost(roomId) === peerId) {
       this.closeRoom(roomId)
@@ -89,11 +89,6 @@ export class Server {
         peers: this.rooms[roomId].map(peer => peer.id),
       })
     }
-  }
-
-  //TODO: Decide if I need to handle pong or a heartbeat type and use it for peer timeouts
-  private handlePong(peerId: PeerId, roomId: RoomId) {
-    console.log('pong', peerId, roomId)
   }
 
   public sendToAll(roomId: RoomId, msg: Message.ServerToClient) {
@@ -120,12 +115,12 @@ export class Server {
   private handleHandshake: preHandlerHookHandler = (req, res, nxt) => {
     const { peerId, roomId } = req.params as { peerId: PeerId; roomId: RoomId }
 
-    if (!this.rooms[roomId]) return res.code(404).send(RejectCode.RoomNotFound)
+    if (!this.rooms[roomId]) return res.code(404).send(CloseCode.RoomNotFound)
 
     if (this.rooms[roomId].some(peer => peer.id === peerId))
-      return res.code(409).send(RejectCode.DuplicatePeerId)
+      return res.code(409).send(CloseCode.DuplicatePeerId)
 
-    if (this.rooms[roomId].length >= this.capacity) return res.code(403).send(RejectCode.RoomFull)
+    if (this.rooms[roomId].length >= this.capacity) return res.code(403).send(CloseCode.RoomFull)
 
     nxt()
   }
@@ -153,13 +148,8 @@ export class Server {
           const { peerId, roomId } = req.params
           this.handleJoin(peerId, roomId, cn.socket)
           cn.socket.on('message', message => this.handleMessage(peerId, roomId, message))
-          cn.socket.on('close', code => {
-            console.log('close', code)
-            this.handleLeave(peerId, roomId, code)
-          })
-          // cn.socket.on('close', code => this.handleLeave(peerId, roomId, code))
+          cn.socket.on('close', () => this.handleLeave(peerId, roomId))
           cn.socket.on('error', () => this.handleLeave(peerId, roomId))
-          cn.socket.on('pong', () => this.handlePong(peerId, roomId))
         }
       )
     })

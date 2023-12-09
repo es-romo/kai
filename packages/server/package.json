@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node build/src/start.js",
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "author": "Esteban Romo Esparza",
   "license": "MIT",
@@ -17,5 +17,13 @@
   "devDependencies": {
     "@types/ws": "^8.5.10",
     "portfinder": "^1.0.32"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "preset": "ts-jest",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/build"
+    ]
   }
 }

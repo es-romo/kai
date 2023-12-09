@@ -1,7 +1,7 @@
 {
   "name": "@es-romo/relay",
   "version": "0.0.0",
-  "description": "A minimal implementation of a WebSockets relay server.",
+  "description": "Monorepo containing @es-romo/relay",
   "private": true,
   "scripts": {
     "test": "jest"

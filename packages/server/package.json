@@ -1,6 +1,6 @@
 {
   "name": "@es-romo/relay-server",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "A tiny WebSocket relay server for listen server architectures",
   "main": "build/index.js",
   "scripts": {

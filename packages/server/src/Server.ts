@@ -1,4 +1,4 @@
-import Fastify, { FastifyInstance, FastifyRequest, preHandlerHookHandler } from 'fastify'
+import Fastify, { FastifyInstance, preHandlerHookHandler } from 'fastify'
 import FastifyWebsocket from '@fastify/websocket'
 import pkg from '../package.json'
 import WebSocket from 'ws'
@@ -34,7 +34,7 @@ export class Server {
     })
   }
 
-  public createRoom(): RoomId {
+  private createRoom(): RoomId {
     //TODO: find a better way to generate room id
     const roomId = Math.random().toString(36).substr(2, 4).toUpperCase()
     this.rooms[roomId] = []
@@ -47,12 +47,12 @@ export class Server {
     return roomId
   }
 
-  public closeRoom(roomId: RoomId) {
+  private closeRoom(roomId: RoomId) {
     this.rooms[roomId]?.forEach(peer => peer.socket.close(CloseCode.RoomClosed))
     delete this.rooms[roomId]
   }
 
-  public getHost(roomId: RoomId): PeerId | undefined {
+  private getHostId(roomId: RoomId): PeerId | undefined {
     return this.rooms[roomId]?.[0]?.id
   }
 
@@ -61,12 +61,12 @@ export class Server {
     this.sendToAll(roomId, { type: 'Join', peerId, peers: this.rooms[roomId].map(peer => peer.id) })
   }
 
-  // TODO: Properly parse message
   private handleMessage(peerId: PeerId, roomId: RoomId, message: WebSocket.RawData) {
-    const msg = JSON.parse(message.toString()) as Message.ClientToServer
+    const msg = this.tryParseMessage(message)
+    if (!msg) return
     switch (msg.type) {
       case 'Data':
-        if (this.getHost(roomId) === peerId) {
+        if (this.getHostId(roomId) === peerId) {
           this.sendToPeers(roomId, { type: 'Data', data: msg.data, from: peerId })
         } else {
           this.sendToHost(roomId, { type: 'Data', data: msg.data, from: peerId })
@@ -79,7 +79,7 @@ export class Server {
     // If the room does not exist anymore, don't do anything as its all gone
     if (!this.rooms[roomId]) return
 
-    if (this.getHost(roomId) === peerId) {
+    if (this.getHostId(roomId) === peerId) {
       this.closeRoom(roomId)
     } else {
       this.rooms[roomId] = this.rooms[roomId].filter(peer => peer.id !== peerId)
@@ -91,22 +91,22 @@ export class Server {
     }
   }
 
-  public sendToAll(roomId: RoomId, msg: Message.ServerToClient) {
+  private sendToAll(roomId: RoomId, msg: Message.ServerToClient) {
     for (const peer of this.rooms[roomId]) {
       peer.socket.send(JSON.stringify(msg))
     }
   }
 
-  public sendToHost(roomId: RoomId, msg: Message.ServerToClient) {
-    const hostId = this.getHost(roomId)
+  private sendToHost(roomId: RoomId, msg: Message.ServerToClient) {
+    const hostId = this.getHostId(roomId)
     if (hostId) {
       const host = this.rooms[roomId]?.find(peer => peer.id === hostId)
       if (host) host.socket.send(JSON.stringify(msg))
     }
   }
 
-  public sendToPeers(roomId: RoomId, msg: Message.ServerToClient) {
-    const hostId = this.getHost(roomId)
+  private sendToPeers(roomId: RoomId, msg: Message.ServerToClient) {
+    const hostId = this.getHostId(roomId)
     for (const peer of this.rooms[roomId]) {
       if (hostId !== peer.id) peer.socket.send(JSON.stringify(msg))
     }
@@ -123,6 +123,16 @@ export class Server {
     if (this.rooms[roomId].length >= this.capacity) return res.code(403).send(CloseCode.RoomFull)
 
     nxt()
+  }
+
+  private tryParseMessage(message: WebSocket.RawData) {
+    try {
+      const json = JSON.parse(message.toString()) as Message.ClientToServer
+      if (json.type !== 'Data' || typeof json.data !== 'string') return
+      return json
+    } catch (e) {
+      return undefined
+    }
   }
 
   listen() {

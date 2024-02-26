@@ -1,5 +1,5 @@
 import { Server } from './Server'
-import { getPortPromise as getAvailablePort } from 'portfinder'
+import { getPortPromise } from 'portfinder'
 import { CloseCode, Message, PeerId } from './types'
 import WebSocket from 'ws'
 
@@ -11,7 +11,7 @@ describe('Server', () => {
   const timeout = 3e3
 
   beforeAll(async () => {
-    const port = await getAvailablePort({ port: 3100 })
+    const port = await getPortPromise({ port: 3100 })
 
     wsUrl = `ws://localhost:${port}`
     httpUrl = `http://localhost:${port}`
@@ -23,7 +23,7 @@ describe('Server', () => {
   const setup = async (quantity = capacity) => {
     const roomId = await createRoom()
 
-    const peerIds = []
+    const peerIds: string[] = []
     for (let i = 0; i < quantity; i++) {
       if (i === 0) peerIds.push('host')
       else peerIds.push(`peer${i}`)
@@ -40,18 +40,6 @@ describe('Server', () => {
   }
 
   afterAll(async () => server.close())
-
-  describe('Version', () => {
-    it('Version number should match the one in package.json', async () => {
-      const pkg = require('../package.json')
-      expect(pkg).toHaveProperty('version')
-      const res = await fetch(`${httpUrl}/version`)
-      expect(res.status).toBe(200)
-      const json = (await res.json()) as { version: string }
-      expect(json).toHaveProperty('version')
-      expect(json.version).toBe(pkg.version)
-    })
-  })
 
   describe('Create Room', () => {
     it('Should return a 200 and a 4 digit roomId', async () => {

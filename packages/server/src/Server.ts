@@ -1,10 +1,7 @@
 import Fastify, { FastifyInstance, preHandlerHookHandler } from 'fastify'
 import FastifyWebsocket from '@fastify/websocket'
-import pkg from '../package.json'
 import WebSocket from 'ws'
 import { Peer, PeerId, RoomId, Message, CloseCode } from './types'
-
-const { version } = pkg
 
 const DEFAULT_PORT = 8080
 const DEFAULT_TIMEOUT = 60e3
@@ -128,7 +125,7 @@ export class Server {
   private tryParseMessage(message: WebSocket.RawData) {
     try {
       const json = JSON.parse(message.toString()) as Message.ClientToServer
-      if (json.type !== 'Data' || typeof json.data !== 'string') return
+      if (json.type !== 'Data' || !json.data) return
       return json
     } catch (e) {
       return undefined
@@ -139,10 +136,6 @@ export class Server {
     this.fastify.register(FastifyWebsocket)
 
     this.fastify.register(async server => {
-      server.get('/version', async () => {
-        return { version }
-      })
-
       server.post('/room', async () => {
         const roomId = this.createRoom()
         return { roomId }

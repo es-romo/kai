@@ -12,7 +12,7 @@ export namespace Message {
 
   export interface DataIn {
     type: 'Data'
-    data: string
+    data: string | number | object
   }
 
   export type ServerToClient = Join | DataOut | Leave
@@ -26,7 +26,7 @@ export namespace Message {
   export interface DataOut {
     type: 'Data'
     from: PeerId
-    data: string
+    data: string | number | object
   }
 
   export interface Leave {

@@ -1,14 +1,16 @@
 {
-  "name": "@es-romo/relay-monorepo",
+  "name": "@es-romo/relay",
   "version": "0.0.0",
-  "description": "Monorepo containing @es-romo/relay",
+  "description": "A tiny WebSocket relay server for listen server architectures",
   "private": true,
+  "main": "dist/index",
+  "types": "dist/index",
+  "typings": "dist/index",
   "scripts": {
+    "start": "node dist/start.js",
+    "build": "tsc",
     "test": "jest"
   },
-  "workspaces": [
-    "packages/*"
-  ],
   "keywords": [
     "relay"
   ],
@@ -21,20 +23,25 @@
     "arrowParens": "avoid",
     "trailingComma": "es5"
   },
+  "dependencies": {
+    "@fastify/websocket": "^8.2.0",
+    "fastify": "^4.24.3"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.10",
     "@types/node": "^20.10.0",
     "@types/ws": "^8.5.10",
     "jest": "^29.7.0",
-    "lerna": "^8.0.0",
     "ts-jest": "^29.1.1",
     "typescript": "^5.3.2",
     "portfinder": "^1.0.32"
   },
   "jest": {
-    "projects": [
-      "<rootDir>/packages/server",
-      "<rootDir>/packages/client"
+    "testEnvironment": "node",
+    "preset": "ts-jest",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/dist"
     ]
   }
 }

@@ -38,6 +38,6 @@ export namespace Message {
 
 export type PeerId = string
 
-export type RoomId = string
+export type RoomCode = string
 
 export type Peer = { id: PeerId; socket: WebSocket }

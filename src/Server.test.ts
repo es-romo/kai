@@ -4,11 +4,11 @@ import { CloseCode, Message, PeerId } from './types'
 import WebSocket from 'ws'
 
 describe('Server', () => {
-  let wsUrl: string = 'ws://localhost:8080'
-  let httpUrl: string = 'http://localhost:8080'
+  let wsUrl: string = ''
+  let httpUrl: string = ''
   let server: Server
-  const capacity = 3
-  const timeout = 3e3
+  const CAPACITY = 3
+  const TIMEOUT = 3e3
 
   beforeAll(async () => {
     const port = await getPortPromise({ port: 3100 })
@@ -16,12 +16,12 @@ describe('Server', () => {
     wsUrl = `ws://localhost:${port}`
     httpUrl = `http://localhost:${port}`
 
-    server = new Server({ port, capacity, timeout })
+    server = new Server({ port, capacity: CAPACITY, timeout: TIMEOUT })
     await server.listen()
   })
 
-  const setup = async (quantity = capacity) => {
-    const roomId = await createRoom()
+  const setup = async (quantity = CAPACITY) => {
+    const roomCode = await createRoom()
 
     const peerIds: string[] = []
     for (let i = 0; i < quantity; i++) {
@@ -29,33 +29,33 @@ describe('Server', () => {
       else peerIds.push(`peer${i}`)
     }
 
-    const sockets = await Promise.all(peerIds.map(peerId => joinRoom(roomId, peerId)))
+    const sockets = await Promise.all(peerIds.map(peerId => joinRoom(roomCode, peerId)))
 
     const connections = peerIds.reduce((peers, peerId, i) => {
       peers[peerId] = sockets[i]
       return peers
     }, {} as { [key: string]: WebSocket })
 
-    return { roomId, connections }
+    return { roomCode, connections }
   }
 
   afterAll(async () => server.close())
 
   describe('Create Room', () => {
-    it('Should return a 200 and a 4 digit roomId', async () => {
+    it('Should return a 200 and a 4 digit roomCode', async () => {
       const res = await fetch(`${httpUrl}/room`, { method: 'POST' })
       expect(res.status).toBe(200)
       const json = (await res.json()) as any
-      expect(json).toHaveProperty('roomId')
-      expect(json.roomId).toMatch(/^[A-Z0-9]{4}$/)
+      expect(json).toHaveProperty('roomCode')
+      expect(json.roomCode).toMatch(/^[A-Z0-9]{4}$/)
     })
   })
 
   describe('Room connections', () => {
     it('Peer should be able to join room', async () => {
       const peerId = 'host'
-      const roomId = await createRoom()
-      const socket = await joinRoom(roomId, peerId)
+      const roomCode = await createRoom()
+      const socket = await joinRoom(roomCode, peerId)
       expect(socket.readyState).toBe(WebSocket.OPEN)
     })
     it('Peer should not be able to join room that does not exist', () => {
@@ -64,30 +64,30 @@ describe('Server', () => {
     })
     it('Peer should not be able to join room that they already joined', async () => {
       const peerId = `test`
-      const roomId = await createRoom()
-      await joinRoom(roomId, peerId)
-      await expect(joinRoom(roomId, peerId)).rejects.toBeDefined()
+      const roomCode = await createRoom()
+      await joinRoom(roomCode, peerId)
+      await expect(joinRoom(roomCode, peerId)).rejects.toBeDefined()
     })
     it('Peer should not be able to join room that is full', async () => {
-      const { roomId, connections } = await setup()
+      const { roomCode, connections } = await setup()
       const peerIds = Object.keys(connections)
-      await expect(joinRoom(roomId, peerIds[0])).rejects.toBeDefined()
+      await expect(joinRoom(roomCode, peerIds[0])).rejects.toBeDefined()
     })
   })
 
   describe('Room lifecycle', () => {
     it('Room should remain open if someone joins', async () => {
-      const roomId = await createRoom()
-      const socket = await joinRoom(roomId, 'peer')
+      const roomCode = await createRoom()
+      const socket = await joinRoom(roomCode, 'peer')
 
-      await sleep(timeout + 50)
+      await sleep(TIMEOUT + 50)
       expect(socket.readyState).toBe(WebSocket.OPEN)
       socket.terminate()
     })
     it('Room should close if no one joins', async () => {
-      const roomId = await createRoom()
-      await sleep(timeout + 50)
-      await expect(joinRoom(roomId, 'peer')).rejects.toBeDefined()
+      const roomCode = await createRoom()
+      await sleep(TIMEOUT + 50)
+      await expect(joinRoom(roomCode, 'peer')).rejects.toBeDefined()
     })
 
     it('Room should stay open if someone leaves', async () => {
@@ -116,9 +116,9 @@ describe('Server', () => {
   describe('Room communcation', () => {
     describe('Join', () => {
       it('All peers should receive a join message when someone joins', async () => {
-        expect.assertions(capacity * 3)
+        expect.assertions(CAPACITY * 3)
         const peerId = 'lastPeer'
-        const { roomId, connections } = await setup(capacity - 1)
+        const { roomCode, connections } = await setup(CAPACITY - 1)
 
         const onmessage = (peerIds: Array<PeerId>) => (event: WebSocket.MessageEvent) => {
           const json = JSON.parse(event.data.toString()) as Message.Join
@@ -134,7 +134,7 @@ describe('Server', () => {
           connections[peerId].onmessage = onmessage(peerIds)
         }
 
-        await joinRoom(roomId, peerId, onmessage(peerIds))
+        await joinRoom(roomCode, peerId, onmessage(peerIds))
 
         await sleep(50)
       })
@@ -166,7 +166,7 @@ describe('Server', () => {
         await sleep(50)
       })
       it('All peers should receive a data message when the host sends data', async () => {
-        expect.assertions((capacity - 1) * 3)
+        expect.assertions((CAPACITY - 1) * 3)
 
         const { connections } = await setup()
         const entries = Object.entries(connections)
@@ -193,7 +193,7 @@ describe('Server', () => {
     })
     describe('Close', () => {
       it('All peers should receive a leave message when someone leaves', async () => {
-        expect.assertions((capacity - 1) * 3)
+        expect.assertions((CAPACITY - 1) * 3)
 
         const { connections } = await setup()
         const entries = Object.entries(connections)
@@ -215,7 +215,7 @@ describe('Server', () => {
         await sleep(50)
       })
       it('All peers connections should close when the host leaves', async () => {
-        expect.assertions(capacity + capacity - 1)
+        expect.assertions(CAPACITY + CAPACITY - 1)
         const { connections } = await setup()
 
         for (const peerId in connections) {
@@ -233,7 +233,7 @@ describe('Server', () => {
     })
     describe('Malformed Message', () => {
       it('Room should remain open if a malformed message is sent', async () => {
-        const { connections } = await setup(capacity - 1)
+        const { connections } = await setup(CAPACITY - 1)
 
         connections['host'].send('This is a malformed message')
         connections['host'].send(234534545456)
@@ -258,12 +258,12 @@ describe('Server', () => {
   })
 
   const joinRoom = async (
-    roomId: string,
+    roomCode: string,
     peerId: string,
     onmessage?: (event: WebSocket.MessageEvent) => void
   ) => {
     return new Promise<WebSocket>((resolve, reject) => {
-      const socket = new WebSocket(`${wsUrl}/${peerId}/${roomId}`)
+      const socket = new WebSocket(`${wsUrl}/${peerId}/${roomCode}`)
       socket.onopen = event => {
         setTimeout(() => resolve(event.target), 100)
       }
@@ -275,8 +275,8 @@ describe('Server', () => {
 
   const createRoom = async () => {
     const res = await fetch(`${httpUrl}/room`, { method: 'POST' })
-    const json = (await res.json()) as { roomId: string }
-    return json.roomId
+    const json = (await res.json()) as { roomCode: string }
+    return json.roomCode
   }
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))

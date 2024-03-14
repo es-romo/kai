@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "description": "A tiny WebSocket relay server for listen server architectures",
   "private": true,
-  "main": "dist/index",
-  "types": "dist/index",
-  "typings": "dist/index",
+  "main": "build/index",
+  "types": "build/index",
+  "typings": "build/index",
   "scripts": {
-    "start": "node dist/start.js",
+    "start": "node build/start.js",
     "build": "tsc",
     "test": "jest"
   },
